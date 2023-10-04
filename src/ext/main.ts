@@ -44,10 +44,6 @@ ext.runtime.onExtensionClick.addListener(async () => {
       mutable: true,
     });
 
-    const aspectRatio = 960 / 600;
-    const minWidth = 960;
-    const minHeight = minWidth / aspectRatio;
-
     window = await ext.windows.create({
       center: true,
       fullscreenable: true,
@@ -56,11 +52,10 @@ ext.runtime.onExtensionClick.addListener(async () => {
       vibrancy: false,
       frame: false,
       titleBarStyle: "inset",
-      width: minWidth,
-      height: minHeight,
-      minWidth,
-      minHeight,
-      aspectRatio,
+      width: 1000,
+      height: 562,
+      minWidth: 600,
+      aspectRatio: 1000 / 562,
     });
 
     const contentSize = await ext.windows.getContentSize(window.id);
@@ -82,10 +77,10 @@ ext.runtime.onExtensionClick.addListener(async () => {
     });
 
     await ext.webviews.loadFile(webview.id, "index.html");
-    await ext.webviews.openDevTools(webview.id, {
-      mode: "detach",
-      activate: true,
-    });
+    // await ext.webviews.openDevTools(webview.id, {
+    //   mode: "detach",
+    //   activate: true,
+    // });
 
     await ext.windows.focus(window.id);
     await ext.webviews.focus(webview.id);
