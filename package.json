@@ -1,6 +1,6 @@
 {
   "name": "extension-triangle-back-to-home",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Extension description",
   "type": "module",
   "scripts": {
