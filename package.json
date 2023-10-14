@@ -1,7 +1,7 @@
 {
   "name": "extension-triangle-back-to-home",
-  "version": "1.0.1",
-  "description": "Extension description",
+  "version": "1.0.2",
+  "description": "Navigate the scary maze: help Triangle return home safely!",
   "type": "module",
   "scripts": {
     "build": "cross-env NODE_ENV=production node ./scripts/build.mjs",
