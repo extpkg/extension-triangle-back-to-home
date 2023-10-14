@@ -1,6 +1,6 @@
 # Triangle: Back to home
 
-Extension description
+Navigate the scary maze: help Triangle return home safely!
 
 ## Build
 
