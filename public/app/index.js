@@ -1402,7 +1402,7 @@ function Block(type, x, y, w, h, d) {
 
 window.map = (() => {
   const scale = 40;
-  let currentLevel = 0;
+  let currentLevel = parseInt(localStorage.getItem("currentLevel") ?? 0, 10);
   const levels = [
     // #1
     [
@@ -2201,9 +2201,11 @@ window.map = (() => {
     },
     getMap: () => mapData,
     currentLevel: () => currentLevel,
+    levelsAmount: () => levels.length,
     nextLevel: (direction) => {
       backward = direction === -1;
       currentLevel += direction;
+      localStorage.setItem("currentLevel", currentLevel);
     },
     getStart: () => mapData.start,
     getCharacterStart: () => (backward ? mapData.end : mapData.start),
@@ -2581,8 +2583,13 @@ window.scene = (() => {
       }
 
       c.save();
-      c.translate(1250, 690);
-      c.scale(0.3, 0.3);
+      c.translate(1180, 670);
+      c.scale(1, -1);
+      c.font = "30px Courier New";
+      c.fillStyle = "white";
+      if (!gc.splashScreen) {
+        c.fillText(`${map.currentLevel()}/${map.levelsAmount()}`, 0, 0);
+      }
       c.restore();
     },
   };
