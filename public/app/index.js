@@ -9,6 +9,7 @@
     paused: false,
     splashScreen: true,
     graphicsQuality: 1,
+    confirmReset: false,
     changeQuality: (value) => {
       gc.graphicsQuality = value;
       changeCanvasSize();
@@ -37,13 +38,6 @@
     scene.i();
 
     live();
-
-    gc.canvas.addEventListener("click", (e) => {
-      if (gc.splashScreen) gc.splashScreen = false;
-      gc.ac = window.AudioContext
-        ? new AudioContext()
-        : new window.webkitAudioContext();
-    });
   }
 
   function resize() {
@@ -110,51 +104,88 @@
 })();
 
 window.control = (() => {
-  const pressed = [0, 0, 0];
+  const pressed = {
+    left: false,
+    right: false,
+    up: false,
+    pause: false,
+  };
 
   return {
     i: () => {
       window.addEventListener("keydown", (event) => {
-        if (event.code === "KeyA" || event.code === "ArrowLeft") {
-          pressed[0] = 1;
+        if (event.metaKey) return;
+
+        if (
+          (event.code === "KeyA" || event.code === "ArrowLeft") &&
+          !gc.paused
+        ) {
+          pressed.left = true;
         }
         if (
-          event.code === "KeyW" ||
-          event.code === "Space" ||
-          event.key === "ArrowUp"
+          (event.code === "KeyW" ||
+            event.code === "Space" ||
+            event.key === "ArrowUp") &&
+          !gc.paused
         ) {
-          pressed[1] = 1;
+          pressed.up = true;
         }
-        if (event.code === "KeyD" || event.code === "ArrowRight") {
-          pressed[2] = 1;
+        if (
+          (event.code === "KeyD" || event.code === "ArrowRight") &&
+          !gc.paused
+        ) {
+          pressed.right = true;
         }
-
-        if (event.code === "Digit1") {
-          gc.changeQuality(1);
+        if (event.code === "KeyR") {
+          gc.confirmReset = true;
+          gc.paused = true;
         }
-        if (event.code === "Digit2") {
-          gc.changeQuality(0.75);
+        if (event.code === "KeyC") {
+          if (gc.splashScreen) {
+            map.loadSave();
+            gc.splashScreen = false;
+            gc.ac = window.AudioContext
+              ? new AudioContext()
+              : new window.webkitAudioContext();
+          }
         }
-        if (event.code === "Digit3") {
-          gc.changeQuality(0.5);
+        if (event.code === "KeyN") {
+          if (gc.splashScreen) {
+            gc.splashScreen = false;
+            gc.ac = window.AudioContext
+              ? new AudioContext()
+              : new window.webkitAudioContext();
+          }
+          if (gc.confirmReset) {
+            gc.paused = false;
+            gc.confirmReset = false;
+          }
         }
-        if (event.code === "Digit4") {
-          gc.changeQuality(0.1);
+        if (event.code === "KeyY") {
+          if (gc.confirmReset) {
+            map.restart();
+            character.i();
+            gc.confirmReset = false;
+            gc.paused = false;
+          }
+        }
+        if (event.code === "Escape") {
+          if (gc.confirmReset) gc.confirmReset = false;
         }
       });
       window.addEventListener("keyup", (event) => {
         if (event.code === "KeyA" || event.code === "ArrowLeft") {
-          pressed[0] = 0;
+          pressed.left = false;
         }
         if (
           event.code === "KeyW" ||
           event.code === "Space" ||
           event.code === "ArrowUp"
         ) {
-          pressed[1] = 0;
+          pressed.up = false;
         }
         if (event.code === "KeyD" || event.code === "ArrowRight") {
-          pressed[2] = 0;
+          pressed.right = false;
         }
       });
     },
@@ -580,10 +611,10 @@ window.character = (() => {
       const acc = velocity.get().normalize().mult(-0.017);
       acc.add(gc.gravity.get().mult(MASS));
 
-      if (control.pressed[0]) {
+      if (control.pressed.left) {
         acc.add(new V(-1, 0));
         characterAnimations.mirror(true);
-      } else if (control.pressed[2]) {
+      } else if (control.pressed.right) {
         acc.add(new V(1, 0));
         characterAnimations.mirror(false);
       }
@@ -613,7 +644,7 @@ window.character = (() => {
           velocity.y = 0;
           position.add(item.velocity);
 
-          if (!control.pressed[0] && !control.pressed[2]) {
+          if (!control.pressed.left && !control.pressed.right) {
             if (item.type === 2) {
               velocity.x /= 1.02;
             } else {
@@ -628,7 +659,7 @@ window.character = (() => {
         if (item.side === 1) {
           position.x = item.intersect;
           if (
-            control.pressed[0] &&
+            control.pressed.left &&
             velocity.y < 0 &&
             stamina > 0 &&
             collisionResult.sides.indexOf(0) === -1
@@ -638,7 +669,7 @@ window.character = (() => {
             particles.addWall(position, -1);
             stamina -= OUT_STAMINA_AT_WALL;
 
-            if (control.pressed[1]) {
+            if (control.pressed.up) {
               if (jump.first) {
                 velocity.add(new V(20, 15));
                 characterAnimations.to("jump", false, true);
@@ -654,7 +685,7 @@ window.character = (() => {
         if (item.side === 3) {
           position.x = item.intersect;
           if (
-            control.pressed[2] &&
+            control.pressed.right &&
             velocity.y < 0 &&
             stamina > 0 &&
             collisionResult.sides.indexOf(0) === -1
@@ -664,7 +695,7 @@ window.character = (() => {
             particles.addWall(position, 1);
             stamina -= OUT_STAMINA_AT_WALL;
 
-            if (control.pressed[1]) {
+            if (control.pressed.up) {
               if (jump.first) {
                 velocity.add(new V(-20, 15));
                 characterAnimations.to("jump", false, true);
@@ -683,13 +714,13 @@ window.character = (() => {
       });
 
       if (collisionResult.sides.indexOf(0) !== -1 && velocity.y <= 0) {
-        if (control.pressed[0] || control.pressed[2]) {
+        if (control.pressed.left || control.pressed.right) {
           characterAnimations.to("walk");
         } else if (!isRelaxing) {
           characterAnimations.to("stay");
         }
 
-        if (control.pressed[1]) {
+        if (control.pressed.up) {
           if (jump.first) {
             velocity.add(new V(0, 15));
             characterAnimations.to("jump", false, true);
@@ -697,7 +728,7 @@ window.character = (() => {
           }
         }
 
-        if (!jump.first && !control.pressed[1]) {
+        if (!jump.first && !control.pressed.up) {
           jump.first = true;
           jump.second = false;
           jump.done = false;
@@ -717,7 +748,7 @@ window.character = (() => {
           characterAnimations.to("fall");
         }
 
-        if (control.pressed[1] && (jump.second || jump.first)) {
+        if (control.pressed.up && (jump.second || jump.first)) {
           velocity.apply(new V(0, 15));
           characterAnimations.to("jump", false, true);
           jump.first = false;
@@ -725,12 +756,12 @@ window.character = (() => {
           jump.done = true;
         }
 
-        if (!control.pressed[1] && !jump.first && !jump.done) {
+        if (!control.pressed.up && !jump.first && !jump.done) {
           jump.second = true;
         }
       }
 
-      if (!control.pressed[1] && velocity.y > 0) {
+      if (!control.pressed.up && velocity.y > 0) {
         velocity.y /= 1.2;
       }
 
@@ -746,7 +777,7 @@ window.character = (() => {
         levelIsCompleted = true;
       }
 
-      if (control.pressed[0] || control.pressed[1] || control.pressed[2]) {
+      if (control.pressed.left || control.pressed.up || control.pressed.right) {
         lastMove = +new Date();
       }
 
@@ -1402,7 +1433,7 @@ function Block(type, x, y, w, h, d) {
 
 window.map = (() => {
   const scale = 40;
-  let currentLevel = parseInt(localStorage.getItem("currentLevel") ?? 0, 10);
+  let currentLevel = 0;
   const levels = [
     // #1
     [
@@ -2176,6 +2207,13 @@ window.map = (() => {
   }
 
   return {
+    loadSave: () => {
+      currentLevel = parseInt(localStorage.getItem("currentLevel"), 10);
+      initLevel();
+    },
+    save: () => {
+      localStorage.setItem("currentLevel", currentLevel);
+    },
     i: () => {
       initLevel();
     },
@@ -2205,7 +2243,12 @@ window.map = (() => {
     nextLevel: (direction) => {
       backward = direction === -1;
       currentLevel += direction;
-      localStorage.setItem("currentLevel", currentLevel);
+      map.save();
+    },
+    restart: () => {
+      currentLevel = 0;
+      map.save();
+      initLevel();
     },
     getStart: () => mapData.start,
     getCharacterStart: () => (backward ? mapData.end : mapData.start),
@@ -2489,12 +2532,12 @@ window.finalScene = (() => {
       c.save();
       c.translate(100, 550);
       c.scale(1, -1);
-      c.font = "120px Courier New";
+      c.font = "100px Spacetron";
       c.textAlign = "left";
       c.fillStyle = "white";
       c.fillText("THE END", 0, 0);
       c.translate(0, 100);
-      c.font = "60px Courier New";
+      c.font = "40px Spacetron";
       c.fillText("Thanks for playing!", 10, 0);
       c.restore();
 
@@ -2585,11 +2628,15 @@ window.scene = (() => {
       c.save();
       c.translate(1180, 670);
       c.scale(1, -1);
-      c.font = "30px Courier New";
+      c.font = "20px Spacetron";
       c.fillStyle = "white";
       if (!gc.splashScreen) {
+        if (gc.confirmReset) {
+          c.fillText("Restart? Y/N", -1140, 630);
+        }
         c.fillText(`${map.currentLevel()}/${map.levelsAmount()}`, 0, 0);
       }
+
       c.restore();
     },
   };
@@ -2654,19 +2701,22 @@ window.splashScreen = (() => {
     },
     r: () => {
       c.save();
-      c.translate(500, 340);
+      c.translate(550, 430);
       c.scale(1, -1);
-      c.font = "120px Courier New";
+      c.font = "100px Spacetron";
       c.textAlign = "left";
       c.fillStyle = "white";
-      c.fillText("Triangle:", 0, 0);
-      c.translate(0, 100);
-      c.font = "60px Courier New";
+      c.fillText("Triangle", 0, 0);
+      c.translate(-20, 90);
+      c.font = "40px Spacetron";
       c.fillText("Back To Home", 30, 0);
 
-      c.translate(0, 160);
-      c.font = "30px Courier New";
-      c.fillText("(Click to Start)", -30, 0);
+      c.translate(30, 360);
+      c.fillStyle = "white";
+      c.font = "20px Spacetron";
+      c.fillText("Press N to start a new game", 0, -265);
+      c.fillText("Press C to continue", 0, -235);
+
       c.restore();
 
       character.rSplashScreen();
